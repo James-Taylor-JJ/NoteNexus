@@ -28,12 +28,9 @@ def setup():
 
     return notes_dir
 
-
+""" Parse YAML front matter from a note file. Returns a dictionary with metadata and the content. """
 def parse_yaml_header(file_path):
-    """
-    Parse YAML front matter from a note file.
-    Returns a dictionary with metadata and the content.
-    """
+    
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             lines = f.readlines()

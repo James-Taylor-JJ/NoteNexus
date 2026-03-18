@@ -1,20 +1,31 @@
+#!/usr/bin/env python3
+"""
+Future Proof Notes Manager - Version Zero (CLI)
+A personal notes manager using text files with YAML headers.
+Command-line interface version.
+"""
+
 import sys
 from pathlib import Path
 
-"""Initialize the notes application."""
+
 def setup():
+    """Initialize the notes application."""
     # Define the notes directory in HOME
     notes_dir = Path.home() / ".notes"
+
     # Check if notes directory exists (silent check for CLI version)
     if not notes_dir.exists():
         # For CLI version, we don't automatically display this
         # It will be shown if needed by specific commands
         pass
+
     return notes_dir
 
-"""Display help information."""
+
 def show_help():
-    help_text = """""
+    """Display help information."""
+    help_text = """
 Future Proof Notes Manager v0.0
 
 Usage: notes0.py [command]
@@ -26,19 +37,21 @@ Available commands:
   delete <id>   - Delete a Note
   create        - Create a new note
   edit <id>     - Edit a note
-
-Notes directory: {~/.notes/notes}
+Notes directory: {}
     """.format(Path.home() / ".notes")
     print(help_text.strip())
 
-"""Clean up and exit the application."""
+
 def finish(exit_code=0):
+    """Clean up and exit the application."""
     sys.exit(exit_code)
 
-"""Main entry point for the notes CLI application."""
+
 def main():
+    """Main entry point for the notes CLI application."""
     # Setup
     notes_dir = setup()
+
     # Parse command-line arguments
     if len(sys.argv) < 2:
         # No command provided

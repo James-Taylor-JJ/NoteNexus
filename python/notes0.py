@@ -31,8 +31,12 @@ Future Proof Notes Manager v0.0
 Usage: notes0.py [command]
 
 Available commands:
-  help    - Display this help information
-
+  help          - Display this help information
+  list          - List all notes 
+  read <id>     - Read a Note
+  delete <id>   - Delete a Note
+  create        - Create a new note
+  edit <id>     - Edit a note
 Notes directory: {}
     """.format(Path.home() / ".notes")
     print(help_text.strip())
@@ -41,7 +45,6 @@ Notes directory: {}
 def finish(exit_code=0):
     """Clean up and exit the application."""
     sys.exit(exit_code)
-
 
 def main():
     """Main entry point for the notes CLI application."""
