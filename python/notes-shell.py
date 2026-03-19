@@ -29,7 +29,6 @@ def setup():
 
 
 def show_help():
-    """Display help information."""
     help_text = """
 Available commands:
   help    - Display this help information
