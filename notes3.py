@@ -16,20 +16,20 @@ def setup():
     return notes_dir
 
 # Delete a Specific Note
-def delete_note(notes_dir, note_dir=None):
-    # Figure out which file they mean
-    
-    # Make sure that file exists
-        # Check if notes directory exists
+# Delete a Specific Note
+def delete_note(notes_dir, note_id=None):
+    # Check if notes directory exists
     if not notes_dir.exists():
         print(f"Error: Notes directory does not exist: {notes_dir}", file=sys.stderr)
         print("Create it with: mkdir -p ~/.notes/notes", file=sys.stderr)
         print("Then copy test notes: cp test-notes/*.md ~/.notes/notes/", file=sys.stderr)
         return False
-        # Look for notes in the notes directory (or directly in .notes)
+
+    # Look for notes in the notes directory (or directly in .notes)
     notes_subdir = notes_dir / "notes"
     search_dirs = [notes_subdir] if notes_subdir.exists() else [notes_dir]
-        # Find all note files (*.md, *.note, *.txt)
+
+    # Find all note files (*.md, *.note, *.txt)
     note_files = []
     for search_dir in search_dirs:
         note_files.extend(search_dir.glob("*.md"))
@@ -40,7 +40,8 @@ def delete_note(notes_dir, note_dir=None):
         print(f"No notes found in {notes_dir}")
         print("Copy test notes with: cp test-notes/*.md ~/.notes/notes/", file=sys.stderr)
         return False
-        # If no note was specified, ask for one after showing the list
+
+    # If no note was specified, ask for one after showing the list
     if not note_id:
         print("Please specify a note.\n")
         print("Available notes:")
@@ -50,12 +51,12 @@ def delete_note(notes_dir, note_dir=None):
             title = metadata.get("title", note_file.name)
             print(f"{note_file.name}  -  {title}")
 
-        note_id = input("\nEnter file name: ").strip()
+        note_id = input("\nEnter a file name: ").strip()
 
-        if not note_id:
-            print("Error: No note selected.", file=sys.stderr)
-            return False
-        # Find the requested note
+    if not note_id:
+        print("Error: No note selected.", file=sys.stderr)
+        return False
+
     note_file = None
     for candidate in note_files:
         if candidate.name == note_id:
@@ -73,8 +74,19 @@ def delete_note(notes_dir, note_dir=None):
         return False
 
     # Ask for confirmation
-        # If user says yes, delete it
+    confirmation = input(f"Are you sure you'd like to delete {note_file.name}? (Y/N) ").strip().upper()
+
+    # If user says yes, delete it
+    if confirmation == "Y":
+        note_file.unlink()
+        print(f"{note_file.name} has been deleted.")
+        return True
+    else:
         # If user says no, leave it alone
+        print("Operation cancelled.")
+        return False
+        
+        
     # Print a clear result message
 
 #Read and Display a Specific Note
@@ -260,6 +272,7 @@ Available commands:
   help         - Display this help information
   list         - List all notes in the notes directory
   read <id>    - Display a specific note
+  delete <id>  - Delete a specific note
 
 Notes directory: {}
 
@@ -305,12 +318,8 @@ def main():
         success = read_note(notes_dir, note_id)
         finish(0 if success else 1)
     elif command == "delete":
-        if len(sys.argv) < 3:
-            print("Error: No note ID provided.", file=sys.stderr)
-            print("Usage: notes2.py read <note-id>", file=sys.stderr)
-            finish(1)
-        note_id = sys.argv[2]
-        success = read_note(notes_dir, note_id)
+        note_id = sys.argv[2] if len(sys.argv) >= 3 else None
+        success = delete_note(notes_dir, note_id)
         finish(0 if success else 1)
     else:
         print(f"Error: Unknown command '{command}'", file=sys.stderr)
