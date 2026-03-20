@@ -70,6 +70,7 @@ class NoteRepository:
 
         metadata = self.parse_yaml_header(file_path)
         content = self.read_note_content(file_path)
+        
 
         tags = metadata.get("tags", "")
         if isinstance(tags, str) and tags.startswith("[") and tags.endswith("]"):
@@ -87,6 +88,7 @@ class NoteRepository:
             tags=tags,
             status=metadata.get("status"),
             priority=int(metadata["priority"]) if metadata.get("priority") else None,
+            archived_at = metadata.get("archived_at"),
         )
 
     def load_all_notes(self) -> list[Note]:
@@ -111,6 +113,8 @@ class NoteRepository:
             metadata["status"] = note.status
         if note.priority is not None:
             metadata["priority"] = note.priority
+        if note.archived_at:
+            metadata["archived_at"] = note.archived
 
         self.write_note_file(file_path, metadata, note.content)
 

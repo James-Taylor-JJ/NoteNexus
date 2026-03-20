@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 
-from services.note_service_class import NoteService
-from services.dataset_service_class import DatasetService
+from services.note_service import NoteService
+from services.dataset_service import DatasetService
 
 
 class SearchService:
@@ -19,7 +19,7 @@ class SearchService:
 
     def get_all_note_tags(self) -> List[str]:
         tags = set()
-        notes = self.note_service.list_notes()
+        notes = self.note_service.list_notes(include_archived=True)
 
         for note in notes:
             for tag in note.tags:
@@ -45,13 +45,13 @@ class SearchService:
         all_tags = set(self.get_all_note_tags()) | set(self.get_all_dataset_tags())
         return sorted(all_tags, key=str.lower)
 
-    def search_notes(self, query: str) -> List[Dict[str, Any]]:
+    def search_notes(self, query: str, include_archived: bool = False) -> List[Dict[str, Any]]:
         query = query.strip().lower()
         if not query:
             return []
 
         results = []
-        notes = self.note_service.list_notes()
+        notes = self.note_service.list_notes(include_archived=include_archived)
 
         for note in notes:
             if (
@@ -70,6 +70,8 @@ class SearchService:
                         "created": note.created,
                         "modified": note.modified,
                         "tags": note.tags,
+                        "status": note.status,
+                        "archived_at": note.archived_at,
                     }
                 )
 
@@ -112,25 +114,25 @@ class SearchService:
 
         return results
 
-    def search_all(self, query: str) -> List[Dict[str, Any]]:
+    def search_all(self, query: str, include_archived: bool = False) -> List[Dict[str, Any]]:
         query = query.strip()
         if not query:
             return []
 
-        note_results = self.search_notes(query)
+        note_results = self.search_notes(query, include_archived=include_archived)
         dataset_results = self.search_datasets(query)
 
         combined = note_results + dataset_results
         combined.sort(key=lambda item: (item["type"], item["title"].lower()))
         return combined
 
-    def search_notes_by_tag(self, tag: str) -> List[Dict[str, Any]]:
+    def search_notes_by_tag(self, tag: str, include_archived: bool = False) -> List[Dict[str, Any]]:
         tag = tag.strip().lower()
         if not tag:
             return []
 
         results = []
-        notes = self.note_service.list_notes()
+        notes = self.note_service.list_notes(include_archived=include_archived)
 
         for note in notes:
             normalized_tags = [t.strip().lower() for t in note.tags]
@@ -144,6 +146,8 @@ class SearchService:
                         "created": note.created,
                         "modified": note.modified,
                         "tags": note.tags,
+                        "status": note.status,
+                        "archived_at": note.archived_at,
                     }
                 )
 
@@ -176,14 +180,43 @@ class SearchService:
 
         return results
 
-    def search_all_by_tag(self, tag: str) -> List[Dict[str, Any]]:
+    def search_all_by_tag(self, tag: str, include_archived: bool = False) -> List[Dict[str, Any]]:
         tag = tag.strip()
         if not tag:
             return []
 
-        note_results = self.search_notes_by_tag(tag)
+        note_results = self.search_notes_by_tag(tag, include_archived=include_archived)
         dataset_results = self.search_datasets_by_tag(tag)
 
         combined = note_results + dataset_results
         combined.sort(key=lambda item: (item["type"], item["title"].lower()))
         return combined
+
+    def filter_notes_by_date(
+        self,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        date_field: str = "modified",
+        include_archived: bool = False,
+    ) -> List[Dict[str, Any]]:
+        notes = self.note_service.filter_notes_by_date(
+            start_date=start_date,
+            end_date=end_date,
+            date_field=date_field,
+            include_archived=include_archived,
+        )
+
+        return [
+            {
+                "type": "note",
+                "id": note.filename,
+                "title": note.title,
+                "author": note.author,
+                "created": note.created,
+                "modified": note.modified,
+                "tags": note.tags,
+                "status": note.status,
+                "archived_at": note.archived_at,
+            }
+            for note in notes
+        ]

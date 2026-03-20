@@ -13,3 +13,4 @@ class Note:
     tags: List[str] = field(default_factory=list)
     status: Optional[str] = None
     priority: Optional[int] = None
+    archived_at: Optional[str] = None
