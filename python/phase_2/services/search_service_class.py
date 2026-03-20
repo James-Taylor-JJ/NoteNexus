@@ -17,6 +17,34 @@ class SearchService:
     def _matches_tags(self, query: str, tags: List[str]) -> bool:
         return any(query in tag.lower() for tag in tags)
 
+    def get_all_note_tags(self) -> List[str]:
+        tags = set()
+        notes = self.note_service.list_notes()
+
+        for note in notes:
+            for tag in note.tags:
+                cleaned = tag.strip()
+                if cleaned:
+                    tags.add(cleaned)
+
+        return sorted(tags, key=str.lower)
+
+    def get_all_dataset_tags(self) -> List[str]:
+        tags = set()
+        datasets = self.dataset_service.list_datasets()
+
+        for dataset in datasets:
+            for tag in dataset.tags:
+                cleaned = tag.strip()
+                if cleaned:
+                    tags.add(cleaned)
+
+        return sorted(tags, key=str.lower)
+
+    def get_all_tags(self) -> List[str]:
+        all_tags = set(self.get_all_note_tags()) | set(self.get_all_dataset_tags())
+        return sorted(all_tags, key=str.lower)
+
     def search_notes(self, query: str) -> List[Dict[str, Any]]:
         query = query.strip().lower()
         if not query:
@@ -91,6 +119,70 @@ class SearchService:
 
         note_results = self.search_notes(query)
         dataset_results = self.search_datasets(query)
+
+        combined = note_results + dataset_results
+        combined.sort(key=lambda item: (item["type"], item["title"].lower()))
+        return combined
+
+    def search_notes_by_tag(self, tag: str) -> List[Dict[str, Any]]:
+        tag = tag.strip().lower()
+        if not tag:
+            return []
+
+        results = []
+        notes = self.note_service.list_notes()
+
+        for note in notes:
+            normalized_tags = [t.strip().lower() for t in note.tags]
+            if tag in normalized_tags:
+                results.append(
+                    {
+                        "type": "note",
+                        "id": note.filename,
+                        "title": note.title,
+                        "author": note.author,
+                        "created": note.created,
+                        "modified": note.modified,
+                        "tags": note.tags,
+                    }
+                )
+
+        return results
+
+    def search_datasets_by_tag(self, tag: str) -> List[Dict[str, Any]]:
+        tag = tag.strip().lower()
+        if not tag:
+            return []
+
+        results = []
+        datasets = self.dataset_service.list_datasets()
+
+        for dataset in datasets:
+            normalized_tags = [t.strip().lower() for t in dataset.tags]
+            if tag in normalized_tags:
+                results.append(
+                    {
+                        "type": "dataset",
+                        "id": dataset.filename,
+                        "title": dataset.title,
+                        "author": dataset.author,
+                        "created": dataset.created,
+                        "modified": dataset.modified,
+                        "tags": dataset.tags,
+                        "format": dataset.format,
+                        "row_count": dataset.row_count,
+                    }
+                )
+
+        return results
+
+    def search_all_by_tag(self, tag: str) -> List[Dict[str, Any]]:
+        tag = tag.strip()
+        if not tag:
+            return []
+
+        note_results = self.search_notes_by_tag(tag)
+        dataset_results = self.search_datasets_by_tag(tag)
 
         combined = note_results + dataset_results
         combined.sort(key=lambda item: (item["type"], item["title"].lower()))
