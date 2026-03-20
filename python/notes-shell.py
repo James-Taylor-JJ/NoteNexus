@@ -46,7 +46,6 @@ def parse_yaml_header(file_path):
 
 
 def get_note_files(notes_dir):
-    """Find all note files."""
     if not notes_dir.exists():
         return []
 
@@ -191,7 +190,6 @@ Available commands:
 
 """Main command loop for processing user input."""
 def command_loop(notes_dir):
-    
     while True:
         try:
             command_line = input("notes> ").strip()
