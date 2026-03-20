@@ -7,6 +7,7 @@ A personal notes manager using text files with YAML headers.
 import os
 import sys
 from pathlib import Path
+from datetime import datetime, timezone
 
 """Initialize the notes application."""
 def setup():
@@ -44,7 +45,34 @@ def parse_yaml_header(file_path):
         metadata["error"] = str(e)
     return metadata
 
+"""Return current UTC timestamp in ISO 8601 format."""
+def current_timestamp():
+   return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+"""Read the body content of a note file, skipping YAML header."""
+def read_note_content(file_path):
+    with open(file_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+
+    content_start = 0
+    if lines and lines[0].strip() == "---":
+        for i in range(1, len(lines)):
+            if lines[i].strip() == "---":
+                content_start = i + 1
+                break
+
+    return "".join(lines[content_start:]).strip()
+
+"""Write a note file with YAML header and content."""
+def write_note_file(file_path, metadata, content):
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write("---\n")
+        for key, value in metadata.items():
+            f.write(f"{key}: {value}\n")
+        f.write("---\n\n")
+        f.write(content.strip() + "\n")
+
+"""Find all note files."""
 def get_note_files(notes_dir):
     if not notes_dir.exists():
         return []
@@ -174,15 +202,118 @@ def delete_note(notes_dir, note_id=None):
         print("Operation cancelled.")
         return False
 
+"""Create a new note."""
+def create_note(notes_dir, note_id=None):
+    notes_subdir = notes_dir / "notes"
+    notes_subdir.mkdir(parents=True, exist_ok=True)
+
+    if not note_id:
+        note_id = input("Enter file name (example: my-note.md): ").strip()
+
+    if not note_id:
+        print("Error: No file name provided.")
+        return False
+
+    if not note_id.endswith((".md", ".note", ".txt")):
+        note_id += ".md"
+
+    note_file = notes_subdir / note_id
+
+    if note_file.exists():
+        print(f"Error: A note named '{note_file.name}' already exists.")
+        return False
+
+    title = input("Title: ").strip()
+    author = input("Author: ").strip()
+
+    print("Enter note content. Type 'END' on its own line to finish.")
+    content_lines = []
+    while True:
+        line = input()
+        if line == "END":
+            break
+        content_lines.append(line)
+
+    content = "\n".join(content_lines)
+
+    timestamp = current_timestamp()
+    metadata = {
+        "title": title if title else note_file.stem,
+        "author": author if author else "Unknown",
+        "created": timestamp,
+        "modified": timestamp,
+    }
+
+    write_note_file(note_file, metadata, content)
+    print(f"Note created: {note_file.name}")
+    return True
+
+"""Edit an existing note."""
+def edit_note(notes_dir, note_id=None):
+    note_files = get_note_files(notes_dir)
+
+    if not note_files:
+        print("No notes found.")
+        return False
+
+    if not note_id:
+        print("Please specify a note.\n")
+        list_notes(notes_dir)
+        note_id = input("\nEnter file name: ").strip()
+
+    if not note_id:
+        print("Error: No note selected.")
+        return False
+
+    note_file = None
+    for candidate in note_files:
+        if candidate.name == note_id:
+            note_file = candidate
+            break
+
+    if note_file is None:
+        print(f"Error: Note not found: {note_id}")
+        return False
+
+    metadata = parse_yaml_header(note_file)
+    old_content = read_note_content(note_file)
+
+    print("=" * 60)
+    print(f"Editing: {note_file.name}")
+    print("Current content:")
+    print("-" * 60)
+    print(old_content)
+    print("-" * 60)
+    print("Enter new content. Type 'END' on its own line to finish.")
+    print("This will replace the old content.")
+
+    content_lines = []
+    while True:
+        line = input()
+        if line == "END":
+            break
+        content_lines.append(line)
+
+    new_content = "\n".join(content_lines).strip()
+    if not new_content:
+        new_content = old_content
+
+    metadata["modified"] = current_timestamp()
+
+    write_note_file(note_file, metadata, new_content)
+    print(f"Note updated: {note_file.name}")
+    return True
+
 """Display help information."""
 def show_help():
+    """Display help information."""
     help_text = """
 Available commands:
   help          - Display this help information
   list          - List all notes
   read <id>     - Read a note
   delete <id>   - Delete a note
-  create        - Create a new note
+  create [id]   - Create a new note
   edit <id>     - Edit a note
   quit          - Exit the application
     """
@@ -190,6 +321,7 @@ Available commands:
 
 """Main command loop for processing user input."""
 def command_loop(notes_dir):
+
     while True:
         try:
             command_line = input("notes> ").strip()
@@ -211,6 +343,10 @@ def command_loop(notes_dir):
                 read_note(notes_dir, note_id)
             elif command == "delete":
                 delete_note(notes_dir, note_id)
+            elif command == "create":
+                create_note(notes_dir, note_id)
+            elif command == "edit":
+                edit_note(notes_dir, note_id)
             else:
                 print(f"Unknown command: '{command}'")
                 print("Type 'help' for available commands.")
