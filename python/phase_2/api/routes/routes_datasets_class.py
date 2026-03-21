@@ -1,71 +1,101 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from typing import Optional
 
-from phase_2.api.deps import get_dataset_service
-from phase_2.api.schemas import (
-    DatasetCreateRequest,
-    DatasetMetadataUpdateRequest,
-    DatasetResponse,
-    DeleteResponse,
-)
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel, Field
+
 from phase_2.services.dataset_service_class import DatasetService
 
-router = APIRouter(prefix="/datasets", tags=["datasets"])
+
+class DatasetCreateRequest(BaseModel):
+    filename: str
+    raw_content: str
+    title: str = ""
+    author: str = ""
+    tags: list[str] = Field(default_factory=list)
+    schema: list[dict] = Field(default_factory=list)
+    row_count: int = 0
+    profile: Optional[dict] = None
 
 
-def to_dataset_response(dataset) -> DatasetResponse:
-    return DatasetResponse(
-        asset_id=dataset.asset_id,
-        asset_type=dataset.asset_type,
-        title=dataset.title,
-        author=dataset.author,
-        created=dataset.created,
-        modified=dataset.modified,
-        tags=dataset.tags,
-        filename=dataset.filename,
-        format=dataset.format,
-        path=dataset.path,
-        row_count=dataset.row_count,
-        schema=dataset.schema,
-        profile=dataset.profile,
-    )
+class DatasetUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    author: Optional[str] = None
+    tags: Optional[list[str]] = None
+    schema: Optional[list[dict]] = None
+    row_count: Optional[int] = None
+    profile: Optional[dict] = None
 
 
-@router.get("", response_model=list[DatasetResponse])
-def list_datasets(service: DatasetService = Depends(get_dataset_service)):
-    datasets = service.list_datasets()
-    return [to_dataset_response(ds) for ds in datasets]
+router = APIRouter(prefix="/api/datasets", tags=["datasets"])
 
 
-@router.get("/{filename}", response_model=DatasetResponse)
-def read_dataset(filename: str, service: DatasetService = Depends(get_dataset_service)):
-    dataset = service.read_dataset(filename)
-    if not dataset:
-        raise HTTPException(status_code=404, detail="Dataset not found")
-    return to_dataset_response(dataset)
+def dataset_to_dict(dataset) -> dict:
+    return {
+        "asset_id": dataset.asset_id,
+        "asset_type": dataset.asset_type,
+        "filename": dataset.filename,
+        "title": dataset.title,
+        "author": dataset.author,
+        "created": dataset.created,
+        "modified": dataset.modified,
+        "tags": dataset.tags,
+        "format": dataset.format,
+        "path": dataset.path,
+        "row_count": dataset.row_count,
+        "schema": dataset.schema,
+        "profile": dataset.profile,
+    }
 
 
-@router.get("/{filename}/preview")
-def preview_dataset(
-    filename: str,
-    limit: int = Query(5, ge=1),
-    service: DatasetService = Depends(get_dataset_service),
-):
-    try:
-        preview = service.preview_dataset(filename, limit=limit)
-        return {"filename": filename, "preview": preview}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+def register_dataset_routes(router: APIRouter, dataset_service: DatasetService) -> None:
+    @router.get("")
+    def list_datasets():
+        datasets = dataset_service.list_datasets()
+        return [dataset_to_dict(dataset) for dataset in datasets]
 
+    @router.get("/{filename}")
+    def read_dataset(filename: str):
+        dataset = dataset_service.read_dataset(filename)
+        if not dataset:
+            raise HTTPException(status_code=404, detail="Dataset not found")
+        return dataset_to_dict(dataset)
 
-@router.post("", response_model=DatasetResponse, status_code=status.HTTP_201_CREATED)
-def create_dataset(
-    payload: DatasetCreateRequest,
-    service: DatasetService = Depends(get_dataset_service),
-):
-    try:
-        dataset = service.create_dataset(
-            filename=payload.filename,
-            raw_content=payload.raw_content,
+    @router.post("")
+    def create_dataset(payload: DatasetCreateRequest):
+        try:
+            dataset = dataset_service.create_dataset(
+                filename=payload.filename,
+                raw_content=payload.raw_content,
+                title=payload.title,
+                author=payload.author,
+                tags=payload.tags,
+                schema=payload.schema,
+                row_count=payload.row_count,
+                profile=payload.profile,
+            )
+            return dataset_to_dict(dataset)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    @router.delete("/{filename}")
+    def delete_dataset(filename: str):
+        deleted = dataset_service.delete_dataset(filename)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Dataset not found")
+        return {"message": f"{filename} deleted"}
+
+    @router.get("/{filename}/preview")
+    def preview_dataset(filename: str, limit: int = Query(default=5, ge=1)):
+        try:
+            preview = dataset_service.preview_dataset(filename, limit=limit)
+            return {"filename": filename, "preview": preview}
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    @router.patch("/{filename}/metadata")
+    def update_dataset_metadata(filename: str, payload: DatasetUpdateRequest):
+        dataset = dataset_service.update_dataset_metadata(
+            filename=filename,
             title=payload.title,
             author=payload.author,
             tags=payload.tags,
@@ -73,34 +103,6 @@ def create_dataset(
             row_count=payload.row_count,
             profile=payload.profile,
         )
-        return to_dataset_response(dataset)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.patch("/{filename}/metadata", response_model=DatasetResponse)
-def update_dataset_metadata(
-    filename: str,
-    payload: DatasetMetadataUpdateRequest,
-    service: DatasetService = Depends(get_dataset_service),
-):
-    dataset = service.update_dataset_metadata(
-        filename=filename,
-        title=payload.title,
-        author=payload.author,
-        tags=payload.tags,
-        schema=payload.schema,
-        row_count=payload.row_count,
-        profile=payload.profile,
-    )
-    if not dataset:
-        raise HTTPException(status_code=404, detail="Dataset not found")
-    return to_dataset_response(dataset)
-
-
-@router.delete("/{filename}", response_model=DeleteResponse)
-def delete_dataset(filename: str, service: DatasetService = Depends(get_dataset_service)):
-    deleted = service.delete_dataset(filename)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Dataset not found")
-    return DeleteResponse(deleted=True)
+        if not dataset:
+            raise HTTPException(status_code=404, detail="Dataset not found")
+        return dataset_to_dict(dataset)
