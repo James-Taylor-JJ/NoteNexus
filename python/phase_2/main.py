@@ -1,6 +1,6 @@
-from repositories.note_repo_class import NoteRepository
-from services.note_service_class import NoteService
-from ui.shell_app import ShellApp
+from phase_2.repositories.note_repo_class import NoteRepository
+from phase_2.services.note_service_class import NoteService
+from phase_2.ui.shell_app import ShellApp
 
 
 def main():
