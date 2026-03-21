@@ -114,7 +114,7 @@ class NoteRepository:
         if note.priority is not None:
             metadata["priority"] = note.priority
         if note.archived_at:
-            metadata["archived_at"] = note.archived
+            metadata["archived_at"] = note.archived_at
 
         self.write_note_file(file_path, metadata, note.content)
 
