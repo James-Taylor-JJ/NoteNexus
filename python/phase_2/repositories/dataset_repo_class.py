@@ -1,124 +1,140 @@
+import csv
+import json
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
+import yaml
+
 from models.dataset_asset import DatasetAsset
-from repositories.dataset_repo_class import DatasetRepository
-from utilities.time_utilities_class import current_timestamp
 
 
-class DatasetService:
-    def __init__(self, repository: DatasetRepository):
-        self.repository = repository
-        self.allowed_extensions = {".csv", ".json"}
+class DatasetRepository:
+    def __init__(self, notes_home: Optional[Path] = None):
+        self.notes_home = notes_home or (Path.home() / ".notes")
+        self.datasets_dir = self.notes_home / "datasets"
 
-    def _normalize_filename(self, filename: str) -> str:
-        filename = filename.strip()
-        if not filename:
-            raise ValueError("Dataset filename is required.")
-        return filename
+    def ensure_datasets_dir(self) -> Path:
+        self.datasets_dir.mkdir(parents=True, exist_ok=True)
+        return self.datasets_dir
 
-    def _validate_extension(self, filename: str) -> None:
-        suffix = Path(filename).suffix.lower()
-        if suffix not in self.allowed_extensions:
-            raise ValueError(
-                f"Unsupported dataset format: {suffix or '[none]'}. "
-                f"Allowed formats are: {', '.join(sorted(self.allowed_extensions))}"
-            )
+    def get_dataset_files(self) -> List[Path]:
+        self.ensure_datasets_dir()
+        dataset_files = []
+        dataset_files.extend(self.datasets_dir.glob("*.csv"))
+        dataset_files.extend(self.datasets_dir.glob("*.json"))
+        return sorted(dataset_files)
 
-    def _infer_format(self, filename: str) -> str:
-        return Path(filename).suffix.lower().lstrip(".")
+    def sidecar_path_for(self, data_file: Path) -> Path:
+        return data_file.with_suffix(data_file.suffix + ".dataset.yml")
 
-    def list_datasets(self) -> List[DatasetAsset]:
-        return self.repository.load_all_datasets()
+    def write_sidecar_metadata(self, file_path: Path, metadata: Dict[str, Any]) -> None:
+        with open(file_path, "w", encoding="utf-8") as f:
+            yaml.safe_dump(metadata, f, sort_keys=False, allow_unicode=True)
 
-    def read_dataset(self, filename: str) -> Optional[DatasetAsset]:
-        filename = self._normalize_filename(filename)
-        return self.repository.load_dataset(filename)
+    def read_sidecar_metadata(self, file_path: Path) -> Dict[str, Any]:
+        if not file_path.exists():
+            return {}
+        with open(file_path, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
 
-    def preview_dataset(self, filename: str, limit: int = 5) -> List[Dict[str, Any]]:
-        filename = self._normalize_filename(filename)
-        if limit < 1:
-            raise ValueError("Preview limit must be at least 1.")
-        return self.repository.preview_dataset(filename, limit)
+    def save_dataset_file(self, filename: str, content: str) -> Path:
+        self.ensure_datasets_dir()
+        file_path = self.datasets_dir / filename
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        return file_path
 
-    def create_dataset(
-        self,
-        filename: str,
-        raw_content: str,
-        title: str = "",
-        author: str = "",
-        tags: Optional[List[str]] = None,
-        schema: Optional[List[Dict[str, Any]]] = None,
-        row_count: int = 0,
-        profile: Optional[Dict[str, Any]] = None,
-    ) -> DatasetAsset:
-        filename = self._normalize_filename(filename)
-        self._validate_extension(filename)
+    def save_dataset(self, dataset: DatasetAsset, raw_content: str) -> None:
+        file_path = self.save_dataset_file(dataset.filename, raw_content)
+        sidecar_path = self.sidecar_path_for(file_path)
 
-        existing = self.repository.load_dataset(filename)
-        if existing:
-            raise ValueError(f"Dataset already exists: {filename}")
+        metadata = {
+            "id": dataset.asset_id,
+            "title": dataset.title,
+            "author": dataset.author,
+            "created": dataset.created,
+            "modified": dataset.modified,
+            "tags": dataset.tags,
+            "format": dataset.format,
+            "path": dataset.path,
+            "rowCount": dataset.row_count,
+            "schema": dataset.schema,
+        }
 
-        timestamp = current_timestamp()
-        dataset = DatasetAsset(
-            asset_id=filename,
+        if dataset.profile is not None:
+            metadata["profile"] = dataset.profile
+
+        self.write_sidecar_metadata(sidecar_path, metadata)
+
+    def load_dataset(self, filename: str) -> Optional[DatasetAsset]:
+        file_path = self.datasets_dir / filename
+        if not file_path.exists():
+            return None
+
+        metadata = self.read_sidecar_metadata(self.sidecar_path_for(file_path))
+
+        return DatasetAsset(
+            asset_id=metadata.get("id", ""),
             asset_type="dataset",
-            title=title.strip() or Path(filename).stem,
-            author=author.strip() or "Unknown",
-            created=timestamp,
-            modified=timestamp,
-            tags=tags or [],
-            filename=filename,
-            format=self._infer_format(filename),
-            path=filename,
-            row_count=row_count,
-            schema=schema or [],
-            profile=profile,
+            title=metadata.get("title", file_path.stem),
+            author=metadata.get("author", "Unknown"),
+            created=metadata.get("created", ""),
+            modified=metadata.get("modified", ""),
+            tags=metadata.get("tags", []) or [],
+            filename=file_path.name,
+            format=metadata.get("format", file_path.suffix.lstrip(".")),
+            path=metadata.get("path", file_path.name),
+            row_count=metadata.get("rowCount", 0),
+            schema=metadata.get("schema", []) or [],
+            profile=metadata.get("profile"),
         )
 
-        self.repository.save_dataset(dataset, raw_content)
-        return dataset
+    def load_all_datasets(self) -> List[DatasetAsset]:
+        datasets = []
+        for path in self.get_dataset_files():
+            dataset = self.load_dataset(path.name)
+            if dataset:
+                datasets.append(dataset)
+        return datasets
 
     def delete_dataset(self, filename: str) -> bool:
-        filename = self._normalize_filename(filename)
-        return self.repository.delete_dataset(filename)
+        file_path = self.datasets_dir / filename
+        if not file_path.exists():
+            return False
 
-    def update_dataset_metadata(
-        self,
-        filename: str,
-        title: Optional[str] = None,
-        author: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        schema: Optional[List[Dict[str, Any]]] = None,
-        row_count: Optional[int] = None,
-        profile: Optional[Dict[str, Any]] = None,
-    ) -> Optional[DatasetAsset]:
-        filename = self._normalize_filename(filename)
-        dataset = self.repository.load_dataset(filename)
-        if not dataset:
-            return None
+        sidecar_path = self.sidecar_path_for(file_path)
+        file_path.unlink()
 
-        raw_path = self.repository.datasets_dir / filename
-        if not raw_path.exists():
-            return None
+        if sidecar_path.exists():
+            sidecar_path.unlink()
 
-        with open(raw_path, "r", encoding="utf-8") as f:
-            raw_content = f.read()
+        return True
 
-        if title is not None:
-            dataset.title = title.strip() or dataset.title
-        if author is not None:
-            dataset.author = author.strip() or dataset.author
-        if tags is not None:
-            dataset.tags = tags
-        if schema is not None:
-            dataset.schema = schema
-        if row_count is not None:
-            dataset.row_count = row_count
-        if profile is not None:
-            dataset.profile = profile
+    def preview_dataset(self, filename: str, limit: int = 5) -> List[Dict[str, Any]]:
+        file_path = self.datasets_dir / filename
+        if not file_path.exists():
+            return []
 
-        dataset.modified = current_timestamp()
+        # CSV preview
+        if file_path.suffix == ".csv":
+            with open(file_path, "r", encoding="utf-8", newline="") as f:
+                reader = csv.DictReader(f)
+                rows = []
+                for i, row in enumerate(reader):
+                    if i >= limit:
+                        break
+                    rows.append(row)
+                return rows
 
-        self.repository.save_dataset(dataset, raw_content)
-        return dataset
+        # JSON preview
+        elif file_path.suffix == ".json":
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+                if isinstance(data, list):
+                    return data[:limit]
+
+                if isinstance(data, dict):
+                    return [data]
+
+        return []
