@@ -1,10 +1,10 @@
 from pathlib import Path
 
-from repositories.note_repo_class import NoteRepository
-from repositories.dataset_repo_class import DatasetRepository
-from services.note_service_class import NoteService
-from services.dataset_service_class import DatasetService
-from services.search_service_class import SearchService
+from phase_2.repositories.note_repo_class import NoteRepository
+from phase_2.repositories.dataset_repo_class import DatasetRepository
+from phase_2.services.note_service_class import NoteService
+from phase_2.services.dataset_service_class import DatasetService
+from phase_2.services.search_service_class import SearchService
 
 DATA_DIR = Path("data")
 

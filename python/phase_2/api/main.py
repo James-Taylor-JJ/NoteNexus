@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 
-from api.routes_notes_class import router as notes_router
-from api.routes_datasets_class import router as datasets_router
-from api.routes_search_class import router as search_router
-from api.routes_tags_class import router as tags_router
+from phase_2.api.routes.routes_notes_class import router as notes_router
+from phase_2.api.routes.routes_datasets_class import router as datasets_router
+from phase_2.api.routes.routes_search_class import router as search_router
+from phase_2.api.routes.routes_tags_class import router as tags_router
 
 app = FastAPI(
     title="NoteNexus API",

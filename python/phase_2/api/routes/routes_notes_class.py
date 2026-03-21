@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from api.deps import get_note_service
-from api.schemas import (
+from phase_2.api.deps import get_note_service
+from phase_2.api.schemas import (
     DeleteResponse,
     MessageResponse,
     NoteContentUpdateRequest,
     NoteCreateRequest,
     NoteResponse,
 )
-from services.note_service_class import NoteService
+from phase_2.services.note_service_class import NoteService
 
 router = APIRouter(prefix="/notes", tags=["notes"])
 

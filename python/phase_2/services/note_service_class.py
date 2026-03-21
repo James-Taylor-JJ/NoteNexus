@@ -1,7 +1,7 @@
 from datetime import datetime
-from models.note_class import Note
-from repositories.note_repo_class import NoteRepository
-from utilities.time_utilities_class import current_timestamp
+from phase_2.models.note_class import Note
+from phase_2.repositories.note_repo_class import NoteRepository
+from phase_2.utilities.time_utilities_class import current_timestamp
 
 
 class NoteService:

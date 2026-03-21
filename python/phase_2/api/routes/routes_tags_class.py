@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
 
-from api.deps import get_search_service
-from api.schemas import TagListResponse
-from services.search_service_class import SearchService
+from phase_2.api.deps import get_search_service
+from phase_2.api.schemas import TagListResponse
+from phase_2.services.search_service_class import SearchService
 
 router = APIRouter(prefix="/tags", tags=["tags"])
 

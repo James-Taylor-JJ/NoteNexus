@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from api.deps import get_dataset_service
-from api.schemas import (
+from phase_2.api.deps import get_dataset_service
+from phase_2.api.schemas import (
     DatasetCreateRequest,
     DatasetMetadataUpdateRequest,
     DatasetResponse,
     DeleteResponse,
 )
-from services.dataset_service_class import DatasetService
+from phase_2.services.dataset_service_class import DatasetService
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
 

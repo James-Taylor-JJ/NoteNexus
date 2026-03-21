@@ -1,7 +1,7 @@
 import json
 
-from models.dataset_asset import DatasetAsset
-from repositories.dataset_repo_class import DatasetRepository
+from phase_2.models.dataset_asset import DatasetAsset
+from phase_2.repositories.dataset_repo_class import DatasetRepository
 
 
 def make_sample_dataset(

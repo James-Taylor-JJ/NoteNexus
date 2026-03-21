@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
-from models.asset_class import Asset
+from phase_2.models.asset_class import Asset
 
 
 @dataclass
