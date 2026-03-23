@@ -1,9 +1,9 @@
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from phase_2.services.dataset_service_class import DatasetService
+from python.phase_2.services.dataset_service_class import DatasetService
 
 
 class DatasetCreateRequest(BaseModel):
@@ -11,22 +11,19 @@ class DatasetCreateRequest(BaseModel):
     raw_content: str
     title: str = ""
     author: str = ""
-    tags: list[str] = Field(default_factory=list)
-    schema: list[dict] = Field(default_factory=list)
+    tags: List[str] = Field(default_factory=list)
+    schema: List[Dict[str, Any]] = Field(default_factory=list)
     row_count: int = 0
-    profile: Optional[dict] = None
+    profile: Optional[Dict[str, Any]] = None
 
 
 class DatasetUpdateRequest(BaseModel):
     title: Optional[str] = None
     author: Optional[str] = None
-    tags: Optional[list[str]] = None
-    schema: Optional[list[dict]] = None
+    tags: Optional[List[str]] = None
+    schema: Optional[List[Dict[str, Any]]] = None
     row_count: Optional[int] = None
-    profile: Optional[dict] = None
-
-
-router = APIRouter(prefix="/api/datasets", tags=["datasets"])
+    profile: Optional[Dict[str, Any]] = None
 
 
 def dataset_to_dict(dataset) -> dict:
@@ -47,7 +44,9 @@ def dataset_to_dict(dataset) -> dict:
     }
 
 
-def register_dataset_routes(router: APIRouter, dataset_service: DatasetService) -> None:
+def build_datasets_router(dataset_service: DatasetService) -> APIRouter:
+    router = APIRouter(prefix="/api/datasets", tags=["datasets"])
+
     @router.get("")
     def list_datasets():
         datasets = dataset_service.list_datasets()
@@ -85,15 +84,24 @@ def register_dataset_routes(router: APIRouter, dataset_service: DatasetService) 
         return {"message": f"{filename} deleted"}
 
     @router.get("/{filename}/preview")
-    def preview_dataset(filename: str, limit: int = Query(default=5, ge=1)):
+    def preview_dataset(
+        filename: str,
+        limit: int = Query(default=5, ge=1)
+    ):
         try:
             preview = dataset_service.preview_dataset(filename, limit=limit)
-            return {"filename": filename, "preview": preview}
+            return {
+                "filename": filename,
+                "preview": preview,
+            }
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
 
     @router.patch("/{filename}/metadata")
-    def update_dataset_metadata(filename: str, payload: DatasetUpdateRequest):
+    def update_dataset_metadata(
+        filename: str,
+        payload: DatasetUpdateRequest
+    ):
         dataset = dataset_service.update_dataset_metadata(
             filename=filename,
             title=payload.title,
@@ -103,6 +111,10 @@ def register_dataset_routes(router: APIRouter, dataset_service: DatasetService) 
             row_count=payload.row_count,
             profile=payload.profile,
         )
+
         if not dataset:
             raise HTTPException(status_code=404, detail="Dataset not found")
+
         return dataset_to_dict(dataset)
+
+    return router

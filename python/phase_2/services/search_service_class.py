@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 
-from phase_2.services.note_service_class import NoteService
-from phase_2.services.dataset_service_class import DatasetService
+from python.phase_2.services.note_service_class import NoteService
+from python.phase_2.services.dataset_service_class import DatasetService
 
 
 class SearchService:

@@ -1,10 +1,13 @@
 import pytest
+from pathlib import Path
+from fastapi.testclient import TestClient
 
-from repositories.note_repo_class import NoteRepository
-from repositories.dataset_repo_class import DatasetRepository
-from services.note_service_class import NoteService
-from services.dataset_service_class import DatasetService
-from services.search_service_class import SearchService
+from phase_2.repositories.note_repo_class import NoteRepository
+from phase_2.repositories.dataset_repo_class import DatasetRepository
+from phase_2.services.note_service_class import NoteService
+from phase_2.services.dataset_service_class import DatasetService
+from phase_2.services.search_service_class import SearchService
+from phase_2.api.main import create_app
 
 
 @pytest.fixture
@@ -30,3 +33,18 @@ def dataset_service(dataset_repo):
 @pytest.fixture
 def search_service(note_service, dataset_service):
     return SearchService(note_service, dataset_service)
+
+
+@pytest.fixture
+def api_client(tmp_path, monkeypatch):
+    """
+    FastAPI test client with isolated filesystem.
+    """
+
+    # Redirect home directory to temp path
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    from phase_2.api.main import create_app
+
+    app = create_app()
+    return TestClient(app)

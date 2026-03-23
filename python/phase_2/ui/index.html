@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NoteNexus</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>NoteNexus</h1>
+    <input id="searchInput" type="text" placeholder="Search notes..." />
+    <button id="searchButton">Search</button>
+    <button id="newNoteButton">New Note</button>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <h2>Notes</h2>
+      <ul id="notesList"></ul>
+    </aside>
+
+    <section class="editor">
+      <form id="noteForm">
+        <input id="filename" type="text" placeholder="Filename (example: note.md)" required />
+        <input id="title" type="text" placeholder="Title" />
+        <input id="author" type="text" placeholder="Author" />
+        <input id="tags" type="text" placeholder="Tags (comma separated)" />
+        <textarea id="content" placeholder="Write your note here..."></textarea>
+
+        <div class="actions">
+          <button type="submit">Save</button>
+          <button type="button" id="deleteButton">Delete</button>
+          <button type="button" id="archiveButton">Archive</button>
+          <button type="button" id="restoreButton">Restore</button>
+        </div>
+      </form>
+
+      <div id="statusMessage"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

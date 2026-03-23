@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Optional
-from phase_2.models.note_class import Note
+from python.phase_2.models.note_class import Note
 
 
 class NoteRepository:

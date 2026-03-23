@@ -2,13 +2,12 @@ from typing import Optional
 
 from fastapi import APIRouter, Query
 
-from phase_2.services.search_service_class import SearchService
+from python.phase_2.services.search_service_class import SearchService
 
 
-router = APIRouter(prefix="/api", tags=["search"])
+def build_search_router(search_service: SearchService) -> APIRouter:
+    router = APIRouter(prefix="/api", tags=["search"])
 
-
-def register_search_routes(router: APIRouter, search_service: SearchService) -> None:
     @router.get("/search")
     def search_all(q: str = Query(...), include_archived: bool = False):
         return search_service.search_all(q, include_archived=include_archived)
@@ -50,3 +49,5 @@ def register_search_routes(router: APIRouter, search_service: SearchService) -> 
             date_field=date_field,
             include_archived=include_archived,
         )
+
+    return router
